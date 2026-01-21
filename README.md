@@ -41,7 +41,7 @@ A powerful, modular AI interface combining a **Data Analyst Agent** for code-bas
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/Data-Analyst-Chatbot.git
+git clone https://github.com/KidSmithy/Data-Analyst-Chatbot.git
 cd Data-Analyst-Chatbot
 ```
 
@@ -112,3 +112,20 @@ python database_viewer.py
 
 ## 🤝 Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+
+## 🔧 Troubleshooting
+
+### Error: `Expecting value: line 1 column 1 (char 0)`
+
+**Symptoms:**  
+The agent fails immediately when trying to start the analysis tools, often displaying a `JSONDecodeError`.
+
+**Cause:**  
+This error means the **MCP Server subprocess crashed** silently on startup and returned no output. This is almost always caused by **missing Python packages** (e.g., `vaderSentiment`, `scikit-learn`) that were recently added to the project.
+
+**Solution:**  
+Ensure all dependencies are installed by running:
+
+```bash
+pip install -r requirements.txt
+```
