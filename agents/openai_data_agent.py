@@ -403,7 +403,7 @@ def test_direct_call(file_path, question, session_id):
                 return {"status": "success", "text": final_html, "images": [], "session_id": session_id, "code": current_code}
             else:
                 last_error = result_text
-                print(f"⚠️ Attempt {attempt} failed.")
+                print(f"⚠️ Attempt {attempt} failed. Error:\n{last_error}")
 
         return {"text": f"Failed after {max_retries} attempts.\nLast error: {last_error}", "images": [], "session_id": session_id}
 

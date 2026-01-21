@@ -231,7 +231,7 @@ async def run_analysis_pipeline(client, task_description, previous_error=None, p
         "4. Your outputs must match professional data analysis standards\n\n"
         
         "=== CODE REQUIREMENTS ===\n"
-        "1. Import pandas as pd, matplotlib.pyplot as plt, seaborn as sns, numpy as np, base64, io\n"
+        "1. Import pandas as pd, matplotlib.pyplot as plt, seaborn as sns, numpy as np, base64, io, and SentimentIntensityAnalyzer from vaderSentiment.vaderSentiment\n"
         "2. FIRST LINE MUST BE: plt.switch_backend('Agg')\n"
         "3. Set style: sns.set_theme(style='whitegrid'), plt.rcParams['figure.figsize'] = (10, 6)\n"
         "4. Use consistent color palette: 'viridis' for sequential, 'Set3' for categorical\n"
@@ -240,7 +240,8 @@ async def run_analysis_pipeline(client, task_description, previous_error=None, p
         "7. CRITICAL: STATELESS EXECUTION. The environment is reset for every script. You must CODE FROM SCRATCH.\n"
         "8. DO NOT assume variables from previous turns exist. Only 'df' exists initially.\n"
         "9. If you need a derived dataframe (e.g., 'df_ana') or a function, you MUST define it in the current script.\n"
-        "10. NEVER use a variable unless you have assigned it a value in THIS script.\n\n"
+        "10. NEVER use a variable unless you have assigned it a value in THIS script.\n"
+        "11. If analyzing text columns (e.g. reviews, feedback), automatically perform sentiment analysis using Vader `SentimentIntensityAnalyzer`.\n\n"
         
         "=== DATA PROCESSING PIPELINE ===\n"
         "1. DATA ACCESS: Work with the existing variable 'df'.\n"
@@ -404,6 +405,7 @@ async def run_analysis_pipeline(client, task_description, previous_error=None, p
             "3. Propose a logical step-by-step plan:\n"
             "   - Data Cleaning (if needed)\n"
             "   - Feature Engineering (if needed)\n"
+                "   - Sentiment Analysis (if text columns are present). DO NOT plan for word counts, word clouds, or text length analysis.\n"
             "   - Specific Visualizations (Type, X, Y)\n"
             "   - Statistical Summaries\n"
             "4. Output a clear, numbered list."
@@ -481,13 +483,11 @@ async def summarize_analysis(raw_output, task_description):
         "2. If the output contains statistical numbers, contextualize them.\n"
         "3. Do NOT mention 'the script printed' or 'raw output'. Present it as a final report.\n"
         "4. Keep it professional and concise.\n"
-        "1. The output contains markers like [[IMG_0]], [[IMG_1]] representing generated graphs.\n"
-        "2. You MUST preserve these markers in your output.\n"
-        "3. Place the markers [[IMG_x]] immediately after the analysis text that describes that specific graph.\n"
-        "4. Explain the key findings based on the printed output.\n"
-        "5. If the output contains statistical numbers, contextualize them.\n"
-        "6. Do NOT mention 'the script printed' or 'raw output'. Present it as a final report.\n"
-        "7. The script usually prints data summaries before the image marker. Use this data to describe the graph accurately.\n"
+        "5. The output contains markers like [[IMG_0]], [[IMG_1]] representing generated graphs.\n"
+        "6. You MUST preserve these markers in your output.\n"
+        "7. Place the markers [[IMG_x]] immediately after the analysis text that describes that specific graph.\n"
+        "8. The script usually prints data summaries before the image marker. Use this data to describe the graph accurately.\n"
+        "9. At the very end, add a section titled '### 💡 Biggest Takeaway' that summarizes the most important finding or trend from the analysis in 1-2 sentences.\n"
     )
     
     user_content = f"User Question: {task_description}\n\nRaw Script Output:\n{raw_output}"
@@ -613,7 +613,7 @@ def test_direct_call(file_path, question, session_id):
                 return {"status": "success", "text": summary, "images": images, "session_id": session_id}
             else:
                 last_error = result_text
-                print(f"⚠️ Attempt {attempt} failed.")
+                print(f"⚠️ Attempt {attempt} failed. Error:\n{last_error}")
         
         return {"text": f"Failed after {max_retries} attempts.\nLast error: {last_error}", "images": [], "session_id": session_id}
 

@@ -236,7 +236,7 @@ def test_direct_call(file_path, question, session_id):
             return result
         else:
             last_error = result["error_message"]
-            print(f"⚠️ Attempt {attempt} failed.")
+            print(f"⚠️ Attempt {attempt} failed. Error:\n{last_error}")
             if attempt == max_retries:
                 return {"text": f"Failed after {max_retries} attempts.\nLast error: {last_error}", 
                         "images": [], "session_id": session_id}

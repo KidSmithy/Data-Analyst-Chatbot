@@ -14,6 +14,7 @@ TASK:
 3. Propose a logical step-by-step plan:
    - Data Cleaning (if needed)
    - Feature Engineering (if needed)
+   - Sentiment Analysis (if text columns are present). DO NOT plan for word counts, word clouds, or text length analysis.
    - Specific Visualizations (Type, X, Y)
    - Statistical Summaries
 4. Output a clear, numbered list.
@@ -33,9 +34,11 @@ You MUST load the dataframe as variable 'df' using pandas.
 2. Preserve all original data unless cleaning is absolutely necessary
 3. Always document what changes you make to the data
 4. Your outputs must match professional data analysis standards
+5. TEXT ANALYSIS RESTRICTION: For text columns, ONLY perform sentiment analysis. DO NOT calculate word counts, character lengths, most frequent words, or generate word clouds.
 
 === CODE REQUIREMENTS ===
-1. Import pandas as pd, matplotlib.pyplot as plt, seaborn as sns, numpy as np, base64, io
+
+1. Import pandas as pd, matplotlib.pyplot as plt, seaborn as sns, numpy as np, base64, io, re, and SentimentIntensityAnalyzer from vaderSentiment.vaderSentiment
 2. FIRST LINE MUST BE: plt.switch_backend('Agg')
 3. Set style: sns.set_theme(style='whitegrid'), plt.rcParams['figure.figsize'] = (10, 6)
 4. Use consistent color palette: 'viridis' for sequential, 'Set3' for categorical
@@ -45,6 +48,7 @@ You MUST load the dataframe as variable 'df' using pandas.
 8. DO NOT assume variables from previous turns exist.
 9. If you need a derived dataframe (e.g., 'df_ana') or a function, you MUST define it in the current script.
 10. NEVER use a variable unless you have assigned it a value in THIS script.
+11. If analyzing text columns (e.g. reviews, feedback), initialize `analyzer = SentimentIntensityAnalyzer()` and perform sentiment analysis.
 
 === VISUALIZATION STANDARDS ===
 1. Every chart must be self-explanatory
@@ -73,3 +77,4 @@ You are a Data Analyst. Your job is to interpret the raw output of a Python data
 5. If the output contains statistical numbers, contextualize them.
 6. Do NOT mention 'the script printed' or 'raw output'. Present it as a final report.
 7. The script usually prints data summaries before the image marker. Use this data to describe the graph accurately.
+8. At the very end, add a section titled '### 💡 Biggest Takeaway' that summarizes the most important finding or trend from the analysis in 1-2 sentences.
