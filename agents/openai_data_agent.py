@@ -143,42 +143,10 @@ async def run_analysis_pipeline(client, task_description, previous_error=None, p
     csv_path = GLOBAL_MEMORY.get("current_csv", "data.csv")
     schema_info = GLOBAL_MEMORY.get("schema_info")
     
-    # Retrieve relevant code examples from Knowledge Base
+    # Knowledge Base features (Plans, Snippets, Docs) have been removed.
     examples_context = ""
-    try:
-        snippets = session_manager.search_code_snippets(task_description, limit=2)
-        if snippets:
-            examples_context = "\n=== REFERENCE CODE PATTERNS (Use these as a guide) ===\n"
-            examples_context = "\n=== REFERENCE CODE PATTERNS (LOGIC ONLY - ADAPT TO STANDARDS) ===\n"
-            examples_context += "WARNING: These examples might use standard plotting (plt.show()). You MUST adapt them to the 'VISUALIZATION STANDARDS' below (Agg backend, Base64).\n"
-            for s in snippets:
-                examples_context += f"\n--- Example: {s['title']} ---\n{s['code']}\n"
-    except Exception as e:
-        print(f"⚠️ Failed to retrieve code snippets: {e}")
-
-    # Retrieve relevant Documentation from Knowledge Base
     docs_context = ""
-    try:
-        docs = session_manager.search_documentation(task_description, limit=3)
-        if docs:
-            docs_context = "\n=== RELEVANT LIBRARY DOCUMENTATION ===\n"
-            docs_context = "\n=== RELEVANT LIBRARY DOCUMENTATION (LOGIC ONLY) ===\n"
-            docs_context += "WARNING: Use the library logic from here, but strictly follow the 'VISUALIZATION STANDARDS' below for output format.\n"
-            for d in docs:
-                docs_context += f"\n--- {d['library_name']}: {d['topic']} ---\n{d['content']}\n"
-    except Exception as e:
-        print(f"⚠️ Failed to retrieve documentation: {e}")
-
-    # Retrieve relevant Analysis Plans for the Planner
     plans_context = ""
-    try:
-        plans = session_manager.search_analysis_plans(task_description, limit=2)
-        if plans:
-            plans_context = "\n=== PROVEN ANALYSIS STRATEGIES (Use these to guide your plan) ===\n"
-            for p in plans:
-                plans_context += f"\n--- Strategy: {p['title']} ---\n{p['content']}\n"
-    except Exception as e:
-        print(f"⚠️ Failed to retrieve analysis plans: {e}")
 
     # Load Prompts
     prompts = load_prompts()
@@ -320,19 +288,6 @@ async def summarize_analysis(raw_output, task_description):
         print(f"❌ Summarizer Error: {e}")
         return raw_output
 
-async def generate_snippet_info(code: str):
-    """Generates a title and description for a code snippet using the LLM."""
-    prompt = f"Analyze this Python code. Provide a JSON object with keys:\n1. 'title' (3-5 words)\n2. 'description' (1 sentence summary)\n3. 'strategy' (A generic, step-by-step analysis plan derived from this code that can be used by a Planner agent for similar future tasks).\n\nCode:\n{code[:2000]}"
-    try:
-        response = await litellm.acompletion(
-            model=MODEL_GENERAL, 
-            messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"}
-        )
-        return json.loads(response.choices[0].message.content)
-    except Exception:
-        return {"title": "Analysis Script", "description": "Auto-saved analysis script.", "strategy": "No strategy extracted."}
-
 def test_direct_call(file_path, question, session_id):
     """The Loop Agent Orchestrator."""
     print(f"\n🔄 OPENAI LOOP AGENT: Session {session_id[:8]}...")
@@ -357,6 +312,18 @@ def test_direct_call(file_path, question, session_id):
             GLOBAL_MEMORY["current_csv"] = current_csv
         else:
              return {"text": "Please upload a CSV file to start analysis.", "images": [], "session_id": session_id}
+
+        # Autoname Session if it has a default title
+        current_sess = session_manager.get_session(session_id)
+        if current_sess:
+            current_title = current_sess.get("title", "")
+            if current_title.startswith("Analysis of") or current_title == "New Analysis Session":
+                fname = Path(current_csv).name if current_csv else "Data"
+                
+                new_title = generate_session_title(question, fname)
+                if new_title:
+                    session_manager.update_session_title(session_id, new_title)
+                    print(f"🏷️ Session Renamed: {new_title}")
 
         # Loop Logic
         max_retries = 3

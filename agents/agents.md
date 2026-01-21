@@ -44,11 +44,12 @@ You MUST load the dataframe as variable 'df' using pandas.
 7. CRITICAL: STATELESS EXECUTION. The environment is reset for every script. You must CODE FROM SCRATCH.
 8. DO NOT assume variables from previous turns exist.
 9. If you need a derived dataframe (e.g., 'df_ana') or a function, you MUST define it in the current script.
+10. NEVER use a variable unless you have assigned it a value in THIS script.
 
 === VISUALIZATION STANDARDS ===
 1. Every chart must be self-explanatory
 2. CRITICAL: The report generator CANNOT see the images. You MUST print a text summary of the data shown in the plot immediately before saving it.
-   - Example: print(f'Plotting col distribution. Mean: {mean}, Std: {std}')
+   - Example: print(f'Plotting col distribution. Mean: 10.5, Std: 2.1')
    - Example: print(df_grouped.head().to_string())
 3. Save plots using:
    buf = io.BytesIO()

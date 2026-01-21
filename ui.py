@@ -32,7 +32,7 @@ def set_research_agent(agent):
 
 def update_input_visibility(mode, interactive=True):
     """Switches the input box style based on the selected agent."""
-    if mode == "Research Assistant":
+    if mode == "🔬 Research Assistant":
         # Hide file upload, change placeholder
         return gr.MultimodalTextbox(value=None, file_count="none", placeholder="Enter your research query (e.g., 'Latest papers on LLM agents')...", interactive=interactive)
     else:
@@ -109,57 +109,6 @@ def load_session_history(selected_session_id):
         print(f"Error loading session: {e}")
         return [], [], None, None
 
-def get_paper_table_html():
-    """Generates HTML table of papers with delete buttons."""
-    if not hasattr(session_manager, "get_all_papers"):
-        return "<div>Database manager not connected or get_all_papers missing.</div>"
-    
-    try:
-        papers = session_manager.get_all_papers()
-        if not papers:
-            return "<div style='padding: 10px;'>No papers found in database.</div>"
-            
-        html = """
-        <table style='width:100%; border-collapse: collapse; font-family: sans-serif; font-size: 0.9em;'>
-            <thead>
-                <tr style='background:#f5f5f5; text-align:left; border-bottom: 2px solid #ddd;'>
-                    <th style='padding:10px;'>ID</th>
-                    <th style='padding:10px;'>Title</th>
-                    <th style='padding:10px;'>Authors</th>
-                    <th style='padding:10px;'>Year</th>
-                    <th style='padding:10px; text-align: center;'>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-        """
-        for p in papers:
-            pid = str(p.get('id', ''))
-            title = p.get('title', 'Untitled')
-            authors = p.get('authors', [])
-            if isinstance(authors, list): authors = ", ".join(authors)
-            else: authors = str(authors)
-            year = str(p.get('published_date', p.get('year', '')))
-            safe_pid = pid.replace("'", "\\'")
-            
-            html += f"""
-            <tr style='border-bottom:1px solid #eee;'>
-                <td style='padding:10px;'>{pid}</td>
-                <td style='padding:10px; font-weight:500;'>{title}</td>
-                <td style='padding:10px; color:#555;'>{authors}</td>
-                <td style='padding:10px;'>{year}</td>
-                <td style='padding:10px; text-align: center;'>
-                    <button onclick="handleSessionAction('delete_paper', '{safe_pid}')" 
-                            style='cursor:pointer; background:#fee; border:1px solid #fcc; color:#c00; padding:4px 8px; border-radius:4px;'>
-                        🗑️ Delete
-                    </button>
-                </td>
-            </tr>
-            """
-        html += "</tbody></table>"
-        return html
-    except Exception as e:
-        return f"<div>Error loading papers: {e}</div>"
-
 def user_submit(message_dict, history, internal_history, session_state, agent_mode):
     """
     Step 1: Handle User Input
@@ -193,14 +142,14 @@ def user_submit(message_dict, history, internal_history, session_state, agent_mo
     
     # 3. Update UI History
     display_text = text
-    if file_path and agent_mode == "Data Analyst":
+    if file_path and agent_mode == "📊 Data Analyst":
         display_text += f" (File: {Path(file_path).name})"
     
     history.append({"role": "user", "content": display_text})
     internal_history.append({"role": "user", "content": display_text})
     
     # 4. Add "Thinking..." placeholder
-    wait_msg = "⏳ Analyzing Data..." if agent_mode == "Data Analyst" else "⏳ Researching (Querying Scholar APIs)..."
+    wait_msg = "⏳ Analyzing Data..." if agent_mode == "📊 Data Analyst" else "⏳ Researching (Querying Scholar APIs)..."
     history.append({"role": "assistant", "content": wait_msg})
     
     # 5. Prepare Data for Next Step (Bot Respond)
@@ -225,14 +174,14 @@ async def bot_respond(history, internal_history, session_state, input_data):
     text = input_data.get("text")
     file_path = input_data.get("file")
     session_id = input_data.get("session_id")
-    mode = input_data.get("mode", "Data Analyst")
+    mode = input_data.get("mode", "📊 Data Analyst")
     
     generated_code = None
     full_response = ""
     
     try:
         # --- ROUTER LOGIC ---
-        if mode == "Data Analyst":
+        if mode == "📊 Data Analyst":
             # Run Data Agent
             # CRITICAL: Run sync code in a thread to avoid blocking the async event loop
             if file_path or GLOBAL_MEMORY["current_csv"]:
@@ -257,7 +206,7 @@ async def bot_respond(history, internal_history, session_state, input_data):
             
             full_response = response_content
 
-        elif mode == "Research Assistant":
+        elif mode == "🔬 Research Assistant":
             # Run Research Agent (MCP)
             # Auto-initialize if not injected (e.g. running ui.py directly)
             if not research_agent_instance:
@@ -291,7 +240,7 @@ async def bot_respond(history, internal_history, session_state, input_data):
                 
         # --- SAVE & UPDATE ---
         # Save the full text response to DB (Research outputs can be long)
-        session_manager.save_message(session_id, "assistant", full_response, generated_code=generated_code)
+        session_manager.save_message(session_id, "assistant", full_response)
         
         # Update Chat UI
         history[-1] = {"role": "assistant", "content": full_response}
@@ -309,61 +258,27 @@ async def bot_respond(history, internal_history, session_state, input_data):
     new_input = update_input_visibility(mode)
     return history, internal_history, new_input, session_state
 
-async def handle_like(evt: gr.LikeData, internal_history):
-    """Handles thumbs-up events to save code snippets."""
-    if evt.liked:
-        index = evt.index
-        if index < len(internal_history):
-            msg = internal_history[index]
-            code = msg.get("code")
-            
-            if code:
-                # Use the agent's helper to generate metadata if available
-                try:
-                    meta = await data_agent.generate_snippet_info(code)
-                    session_manager.save_code_snippet(meta.get("title", "Saved Snippet"), code, meta.get("description", ""))
-                    
-                    # Also save the strategy for the Planner if available
-                    if meta.get("strategy"):
-                        session_manager.save_analysis_plan(meta.get("title"), meta.get("strategy"))
-                        gr.Info(f"💾 Saved Code & Strategy: {meta.get('title')}")
-                    else:
-                        gr.Info(f"💾 Code saved: {meta.get('title')}")
-                except Exception as e:
-                    print(f"Error saving snippet: {e}")
-                    gr.Warning("Failed to save snippet metadata.")
-            else:
-                gr.Info("No code associated with this message.")
-
 def handle_session_action(action_value, current_session_id):
     """Handles actions from the HTML session list."""
     print(f"DEBUG: [ui.py] handle_session_action triggered with '{action_value}'", file=sys.stderr)
     if not action_value or ":" not in action_value:
-        return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), "", gr.update()
+        return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), ""
         
     action, target_id = action_value.split(":", 1)
     
     if action == "load":
         chat, internal, state, disp = load_session_history(target_id)
-        return gr.update(), chat, internal, state, disp, "", gr.update()
+        return gr.update(), chat, internal, state, disp, ""
         
     elif action == "delete":
         session_manager.delete_session(target_id)
         new_html = get_history_html()
         if target_id == current_session_id:
-            return new_html, [], [], None, None, "", gr.update()
+            return new_html, [], [], None, None, ""
         else:
-            return new_html, gr.update(), gr.update(), gr.update(), gr.update(), "", gr.update()
-            
-    elif action == "delete_paper":
-        if hasattr(session_manager, "delete_paper"):
-            session_manager.delete_paper(target_id)
-        else:
-            print("⚠️ session_manager.delete_paper method missing.", file=sys.stderr)
-        # Refresh paper list
-        return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), "", get_paper_table_html()
+            return new_html, gr.update(), gr.update(), gr.update(), gr.update(), ""
         
-    return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), "", gr.update()
+    return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), ""
 
 JS_SESSION_HANDLER = """
 function() {
@@ -436,15 +351,17 @@ def create_ui():
                 with gr.Row(variant="panel"):
                     with gr.Column(scale=1):
                         agent_selector = gr.Dropdown(
-                            choices=["Data Analyst", "Research Assistant"], 
-                            value="Data Analyst", 
+                            choices=["📊 Data Analyst", "🔬 Research Assistant"], 
+                            value="📊 Data Analyst", 
                             label="Select Active Agent",
                             interactive=True
                         )
                     with gr.Column(scale=2):
                         gr.Markdown(
-                            "**Data Analyst:** Upload CSV/Excel files. The agent writes Python code to analyze them.\n"
-                            "**Research Assistant:** Ask questions. The agent searches Google Scholar & Semantic Scholar."
+                            "**📊 Data Analyst Agent:**\n"
+                            "Upload your data files (CSV/Excel). I automatically write and run Python code to clean, analyze, and visualize your data. You can ask for detailed breakdowns or quick questions like, 'What are the top 5 sales regions?'\n\n"
+                            "**🔬 Research Assistant Agent:**\n"
+                            "Ask me any question about recent topics. I will find and summarize relevant papers from academic databases like Google Scholar and Semantic Scholar to provide you with an expert explanation."
                         )
 
                 # --- 2. Chat Interface ---
@@ -460,16 +377,6 @@ def create_ui():
                 
                 # Event: Change Input Box style when Agent switches
                 agent_selector.change(fn=update_input_visibility, inputs=agent_selector, outputs=chat_input)
-
-                # Event: Like (Thumbs Up) to save code
-                # chatbot.like(handle_like, inputs=[internal_history], outputs=None)
-
-            with gr.Tab("📚 Research Database"):
-                gr.Markdown("### 📄 Saved Research Papers")
-                refresh_db_btn = gr.Button("🔄 Refresh List", size="sm")
-                paper_list_html = gr.HTML(value=get_paper_table_html())
-                
-                refresh_db_btn.click(fn=get_paper_table_html, outputs=paper_list_html)
 
         # --- 3. State Management ---
         session_state = gr.State()
@@ -501,7 +408,7 @@ def create_ui():
         action_bridge.change(
             fn=handle_session_action,
             inputs=[action_bridge, session_state],
-            outputs=[session_list, chatbot, internal_history, session_state, session_id_display, action_bridge, paper_list_html]
+            outputs=[session_list, chatbot, internal_history, session_state, session_id_display, action_bridge]
         )
         
         # Also update the HTML when refreshing
