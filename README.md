@@ -35,8 +35,6 @@ A powerful, modular AI interface combining a **Data Analyst Agent** for code-bas
     *   `mcp-server-data-exploration`: Handles local script execution.
     *   Smithery.ai MCPs: Connects to Scholar APIs.
 
----
-
 ## 🚀 Installation
 
 ### 1. Clone the Repository
@@ -92,6 +90,42 @@ python database_viewer.py
 
 ---
 
+## 🧩 MCP Layer & Internals
+
+### MCP Layer
+*   **Data Exploration Server:** A MCP server (`mcp-server-data-exploration`, Source code: https://github.com/reading-plus-ai/mcp-server-data-exploration) runs as a subprocess to handle file loading and Python script execution safely.
+*   **Research Tools:** Connects to external MCP servers (via Smithery) for scholar search tools.
+*   **Persistence:** A SQLite database (via `database/session_manager.py`) stores chat history, sessions, and research papers.
+
+### Server Launcher: `start_mcp.py`
+This script acts as the Launcher and Adapter for the server implementation. It bridges the gap between the main chatbot application and the local MCP package.
+
+**Operational Responsibilities:**
+*   **Environment Virtualization:** Dynamically modifies `sys.path` to include the server source code, allowing the chatbot to access the logic without a standard Python package installation.
+*   **Communication Protocol:** Forces Python’s standard output (`stdout`) and error (`stderr`) to be unbuffered.
+    *   *Note:* This is critical for JSON-RPC communication. Buffering would cause the chatbot to hang while waiting for a response that hasn't been flushed from the system buffer.
+*   **Async Execution:** Initializes the `asyncio` loop and runs the server's main entry point.
+
+*MCP server implementation located in `src/mcp_server_ds/server.py`.*
+
+### Capabilities
+*   **`load_csv`:** Loads a CSV into a persistent Pandas DataFrame in memory.
+*   **`run_script`:** Executes Python scripts against the loaded DataFrame.
+*   **Security:** Prevents direct file system writes (except specific temp paths) and restricts library usage to data science essentials (Pandas, NumPy, Scipy, Matplotlib).
+
+### Integration & Execution Flow
+The chatbot does not import these files directly; instead, it manages the server as a subprocess via the `DirectMCPClient` class.
+
+**Process Lifecycle:**
+1.  **Spawn:** The `DirectMCPClient` locates `start_mcp.py` and launches it using `subprocess.Popen`.
+2.  **Piping:** Standard I/O streams are connected (`stdin` for requests, `stdout` for responses).
+3.  **Handshake:** The client sends an initialize request; the script sets the environment and returns the server's capabilities.
+4.  **Isolation:** This architecture provides **Execution Isolation**. If a complex data script causes a crash or memory overflow, only the MCP subprocess is affected, keeping the main Chatbot UI stable.
+
+---
+
+
+
 ## 📂 Project Structure
 
 ```text
@@ -101,6 +135,7 @@ python database_viewer.py
 │   ├── research_agent.py      # Research Agent (SambaNova)
 │   ├── openai_research_agent.py # Research Agent (OpenAI)
 │   └── agents.md              # System prompts and instructions
+├── mcp-server-data-exploration/ # Local MCP Server implementation
 ├── database.py                # SQLite + Vector DB logic
 ├── database_viewer.py         # Gradio UI for DB management
 ├── ui.py                      # Main Chat Interface
