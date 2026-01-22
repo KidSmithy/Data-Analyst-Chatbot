@@ -19,6 +19,8 @@ A powerful, modular AI interface combining a **Data Analyst Agent** for code-bas
 *   **RAG (Retrieval-Augmented Generation):** Saves found papers to a local SQLite vector database (`sqlite-vec`) for semantic search in future queries.
 *   **Deep Dive:** Can perform parallel "deep dives" into specific papers to extract methodologies and key findings.
 
+> **⚠️ Note:** The Research Agent cannot be effectively run using the **SambaNova API key** (Free Tier) as it consumes massive rate limits during parallel processing. This will likely exhaust the daily rate limit before storing anything meaningful to the database.
+
 ### 🗄️ Database Manager
 *   **Session History:** View, rename, or delete past chat sessions.
 *   **Paper Library:** Manage your saved research papers (view abstracts, delete entries).
